@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ro">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Calculator Plase Țânțari - Nicu</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Calculator local</p>
+        <h1>Calculator Plase Țânțari - Nicu</h1>
+      </div>
+      <div class="status-pill">
+        <span></span>
+        Instant
+      </div>
+    </header>
+
+    <section class="summary-grid" aria-label="Rezumat oferta">
+      <article class="metric-card accent">
+        <span>Oferta recomandată</span>
+        <strong id="recommendedPrice">0 RON</strong>
+      </article>
+      <article class="metric-card">
+        <span>Cost materiale</span>
+        <strong id="materialCost">0 RON</strong>
+      </article>
+      <article class="metric-card">
+        <span>Profit estimat</span>
+        <strong id="estimatedProfit">0 RON</strong>
+      </article>
+      <article class="metric-card">
+        <span>Timp execuție</span>
+        <strong id="executionTime">0 h</strong>
+      </article>
+    </section>
+
+    <div class="layout">
+      <section class="panel input-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Date lucrare</p>
+            <h2>Plase de calculat</h2>
+          </div>
+          <button class="icon-button" id="addNetBtn" type="button" title="Adaugă plasă" aria-label="Adaugă plasă">+</button>
+        </div>
+
+        <form id="netsForm" class="nets-list"></form>
+
+        <div class="actions">
+          <button class="primary" id="calculateBtn" type="button">Calculează</button>
+          <button class="secondary" id="copyBtn" type="button">Copiază Ofertă</button>
+          <button class="ghost" id="resetBtn" type="button">Resetează</button>
+        </div>
+        <p class="copy-feedback" id="copyFeedback" aria-live="polite"></p>
+      </section>
+
+      <section class="panel output-panel">
+        <div class="panel-heading">
+          <div>
+            <p class="eyebrow">Rezultat</p>
+            <h2>Lista de cumpărături</h2>
+          </div>
+        </div>
+
+        <div class="result-block">
+          <h3>Profile</h3>
+          <div id="profileList" class="line-list"></div>
+        </div>
+
+        <div class="result-block">
+          <h3>Debitare profile</h3>
+          <div id="cutsList" class="cuts-list"></div>
+        </div>
+
+        <div class="result-block">
+          <h3>Plasă, cheder și accesorii</h3>
+          <div id="materialsList" class="line-list"></div>
+        </div>
+
+        <div class="result-block">
+          <h3>Prețuri ofertă</h3>
+          <div id="pricingList" class="line-list"></div>
+        </div>
+
+        <div class="result-block">
+          <h3>Deșeuri</h3>
+          <div id="wasteList" class="line-list"></div>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <template id="netTemplate">
+    <article class="net-card">
+      <div class="card-title">
+        <h3>Plasa <span class="net-number"></span></h3>
+        <button class="delete-btn" type="button">Șterge</button>
+      </div>
+
+      <div class="form-grid">
+        <label>
+          <span>Tip</span>
+          <select name="type">
+            <option value="window">Geam</option>
+            <option value="door">Ușă balcon</option>
+          </select>
+        </label>
+
+        <label>
+          <span>Lățime (cm)</span>
+          <input name="width" type="number" min="1" step="1" value="100">
+        </label>
+
+        <label>
+          <span>Înălțime (cm)</span>
+          <input name="height" type="number" min="1" step="1" value="120">
+        </label>
+
+        <label>
+          <span>Cantitate</span>
+          <input name="quantity" type="number" min="1" step="1" value="1">
+        </label>
+      </div>
+
+      <div class="toggle-grid">
+        <label class="toggle-row">
+          <input name="crossbar" type="checkbox">
+          <span>Traversă ranforsare</span>
+        </label>
+
+        <label>
+          <span>Închidere</span>
+          <select name="closing">
+            <option value="clips">Clips</option>
+            <option value="magnetic">Închidere magnetică</option>
+          </select>
+        </label>
+      </div>
+    </article>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
