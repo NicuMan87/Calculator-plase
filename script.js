@@ -23,6 +23,28 @@ const calculateBtn = document.querySelector("#calculateBtn");
 const resetBtn = document.querySelector("#resetBtn");
 const copyBtn = document.querySelector("#copyBtn");
 const copyFeedback = document.querySelector("#copyFeedback");
+const internalModeBtn = document.querySelector("#internalModeBtn");
+const clientEls = {
+  selectedClientLabel: document.querySelector("#selectedClientLabel"),
+  newClientBtn: document.querySelector("#newClientBtn"),
+  saveClientBtn: document.querySelector("#saveClientBtn"),
+  deleteClientBtn: document.querySelector("#deleteClientBtn"),
+  saveOfferToClientBtn: document.querySelector("#saveOfferToClientBtn"),
+  exportDataBtn: document.querySelector("#exportDataBtn"),
+  importDataBtn: document.querySelector("#importDataBtn"),
+  importFileInput: document.querySelector("#importFileInput"),
+  clientName: document.querySelector("#clientName"),
+  clientPhone: document.querySelector("#clientPhone"),
+  clientArea: document.querySelector("#clientArea"),
+  measurementDate: document.querySelector("#measurementDate"),
+  clientStatus: document.querySelector("#clientStatus"),
+  clientNotes: document.querySelector("#clientNotes"),
+  clientSearch: document.querySelector("#clientSearch"),
+  statusFilter: document.querySelector("#statusFilter"),
+  clientList: document.querySelector("#clientList"),
+  offerList: document.querySelector("#offerList"),
+  crmFeedback: document.querySelector("#crmFeedback")
+};
 
 const els = {
   recommendedPrice: document.querySelector("#recommendedPrice"),
@@ -37,6 +59,10 @@ const els = {
 };
 
 let lastResult = null;
+let clients = [];
+let selectedClientId = null;
+let internalMode = false;
+const CRM_STORAGE_KEY = "calculator-plase-nicu-crm-v1";
 
 function ron(value) {
   return `${Math.round(value).toLocaleString("ro-RO")} RON`;
@@ -457,6 +483,17 @@ function render(result) {
 function copyOffer() {
   if (!lastResult) calculate();
   const result = lastResult;
+  if (!internalMode) {
+    navigator.clipboard.writeText(buildClientOfferText(result)).then(() => {
+      copyFeedback.textContent = "Oferta client a fost copiată.";
+      setTimeout(() => {
+        copyFeedback.textContent = "";
+      }, 2200);
+    }).catch(() => {
+      copyFeedback.textContent = "Nu s-a putut copia automat.";
+    });
+    return;
+  }
   const cutSummary = result.cutDetails.map((detail) => (
     `Plasa ${detail.index}: final ${cm(detail.finalWidth)} x ${cm(detail.finalHeight)}; debitare 2 x ${cm(detail.horizontalCut)} orizontal, 2 x ${cm(detail.verticalCut)} vertical${detail.hasCrossbar ? `, 1 x ${cm(detail.crossbarCut)} traversă` : ""}`
   ));
@@ -485,6 +522,516 @@ function copyOffer() {
   });
 }
 
+function uid(prefix) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function setFeedback(message) {
+  if (!clientEls.crmFeedback) return;
+  clientEls.crmFeedback.textContent = message;
+  setTimeout(() => {
+    clientEls.crmFeedback.textContent = "";
+  }, 2600);
+}
+
+function saveClients() {
+  localStorage.setItem(CRM_STORAGE_KEY, JSON.stringify({ clients }));
+}
+
+function loadClients() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(CRM_STORAGE_KEY) || "{}");
+    clients = Array.isArray(parsed.clients) ? parsed.clients : [];
+  } catch (error) {
+    clients = [];
+  }
+}
+
+function selectedClient() {
+  return clients.find((client) => client.id === selectedClientId) || null;
+}
+
+function applyInternalMode(enabled) {
+  internalMode = enabled;
+  document.body.classList.toggle("internal-mode", internalMode);
+  if (internalModeBtn) internalModeBtn.textContent = internalMode ? "Mod intern activ" : "Mod intern";
+  renderClients();
+  renderOffers();
+}
+
+function requestInternalMode() {
+  if (internalMode) {
+    applyInternalMode(false);
+    return;
+  }
+  const pin = window.prompt("PIN mod intern");
+  if (pin === "1987") {
+    applyInternalMode(true);
+    setFeedback("Mod intern activat.");
+  } else if (pin !== null) {
+    setFeedback("PIN incorect.");
+  }
+}
+
+function readClientForm() {
+  return {
+    clientName: clientEls.clientName.value.trim(),
+    phone: clientEls.clientPhone.value.trim(),
+    addressOrArea: clientEls.clientArea.value.trim(),
+    measurementDate: clientEls.measurementDate.value,
+    status: clientEls.clientStatus.value,
+    notes: clientEls.clientNotes.value.trim()
+  };
+}
+
+function fillClientForm(client) {
+  clientEls.clientName.value = client?.clientName || "";
+  clientEls.clientPhone.value = client?.phone || "";
+  clientEls.clientArea.value = client?.addressOrArea || "";
+  clientEls.measurementDate.value = client?.measurementDate || "";
+  clientEls.clientStatus.value = client?.status || "De măsurat";
+  clientEls.clientNotes.value = client?.notes || "";
+}
+
+function newClient() {
+  selectedClientId = null;
+  fillClientForm(null);
+  renderClients();
+  renderOffers();
+  setFeedback("Client nou pregătit.");
+}
+
+function saveClient() {
+  const data = readClientForm();
+  if (!data.clientName) {
+    setFeedback("Completează numele clientului.");
+    return;
+  }
+
+  if (selectedClientId) {
+    const client = selectedClient();
+    if (client) Object.assign(client, data, { updatedAt: new Date().toISOString() });
+  } else {
+    const client = {
+      id: uid("client"),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      offers: [],
+      ...data
+    };
+    clients.unshift(client);
+    selectedClientId = client.id;
+  }
+
+  saveClients();
+  renderClients();
+  renderOffers();
+  setFeedback("Client salvat.");
+}
+
+function deleteClient() {
+  const client = selectedClient();
+  if (!client) {
+    setFeedback("Selectează un client.");
+    return;
+  }
+  if (!window.confirm(`Ștergi clientul ${client.clientName} și ofertele salvate?`)) return;
+  clients = clients.filter((item) => item.id !== client.id);
+  selectedClientId = null;
+  fillClientForm(null);
+  saveClients();
+  renderClients();
+  renderOffers();
+  setFeedback("Client șters.");
+}
+
+function selectClient(clientId) {
+  selectedClientId = clientId;
+  fillClientForm(selectedClient());
+  renderClients();
+  renderOffers();
+}
+
+function getShoppingList(result) {
+  return {
+    profiles: PROFILE_OPTIONS.map((profile) => ({
+      length: profile.length,
+      quantity: result.profilePlan.counts[profile.length] || 0
+    })),
+    mesh: MESH_OPTIONS.map((mesh) => ({
+      label: mesh.label,
+      quantity: result.meshPlan.counts[mesh.length] || 0
+    })),
+    gasket900cm: result.gasketQty,
+    cornerSets: result.cornerSets,
+    accessorySets: result.accessorySets,
+    magneticSets: result.magneticSets
+  };
+}
+
+function getCutList(result) {
+  return {
+    nets: result.cutDetails.map((detail) => ({
+      netNumber: detail.index,
+      type: detail.type,
+      finalWidth: detail.finalWidth,
+      finalHeight: detail.finalHeight,
+      horizontalCuts: [detail.horizontalCut, detail.horizontalCut],
+      verticalCuts: [detail.verticalCut, detail.verticalCut],
+      crossbarCut: detail.hasCrossbar ? detail.crossbarCut : null
+    })),
+    bars: result.profilePlan.bars.map((bar, index) => ({
+      profileNumber: index + 1,
+      length: bar.length,
+      cuts: [...bar.cuts],
+      remaining: bar.remaining
+    }))
+  };
+}
+
+function getWasteValues(result) {
+  return {
+    profileUsedCm: result.totalProfileCutLength,
+    profileWasteCm: result.profilePlan.waste,
+    meshUsedSqm: Number((result.meshPlan.usedArea / 10000).toFixed(2)),
+    meshRemainingSqm: Number((result.meshPlan.remainingArea / 10000).toFixed(2)),
+    meshWastePercent: Number(result.meshPlan.wastePercent.toFixed(1))
+  };
+}
+
+function createOfferSnapshot(result, status) {
+  return {
+    id: uid("offer"),
+    dateCreated: new Date().toISOString(),
+    status,
+    nets: result.nets.map((net) => ({
+      type: net.type === "door" ? "Ușă balcon" : "Geam",
+      finalWidth: net.width,
+      finalHeight: net.height,
+      crossbar: net.crossbar,
+      closingType: net.closing === "magnetic" ? "Închidere magnetică" : "Clips"
+    })),
+    materialCost: result.materialCost,
+    recommendedCustomerPrice: result.recommendedOffer,
+    minimumOffer: result.minOffer,
+    premiumOffer: result.premiumOffer,
+    estimatedProfit: result.profit,
+    profitMargin: result.margin,
+    executionTimeMinutes: result.laborMinutes,
+    profitPerHour: result.profitPerHour,
+    shoppingList: getShoppingList(result),
+    cutList: getCutList(result),
+    wasteValues: getWasteValues(result)
+  };
+}
+
+function saveOfferToClient() {
+  const client = selectedClient();
+  if (!client) {
+    setFeedback("Selectează sau salvează mai întâi un client.");
+    return;
+  }
+  calculate();
+  const offer = createOfferSnapshot(lastResult, client.status);
+  client.offers = Array.isArray(client.offers) ? client.offers : [];
+  client.offers.unshift(offer);
+  if (client.status === "De măsurat") client.status = "Ofertat";
+  client.updatedAt = new Date().toISOString();
+  fillClientForm(client);
+  saveClients();
+  renderClients();
+  renderOffers();
+  setFeedback("Oferta a fost salvată la client.");
+}
+
+function formatDate(value) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleDateString("ro-RO");
+}
+
+function renderClients() {
+  const search = (clientEls.clientSearch?.value || "").trim().toLowerCase();
+  const status = clientEls.statusFilter?.value || "all";
+  const filtered = clients.filter((client) => {
+    const matchesSearch = !search ||
+      (client.clientName || "").toLowerCase().includes(search) ||
+      (client.phone || "").toLowerCase().includes(search);
+    const matchesStatus = status === "all" || client.status === status;
+    return matchesSearch && matchesStatus;
+  });
+
+  const selected = selectedClient();
+  clientEls.selectedClientLabel.textContent = selected ? `Client selectat: ${selected.clientName}` : "Niciun client selectat";
+  clientEls.clientList.innerHTML = "";
+
+  if (!filtered.length) {
+    clientEls.clientList.innerHTML = '<p class="empty-state">Nu există clienți pentru filtrul ales.</p>';
+    return;
+  }
+
+  filtered.forEach((client) => {
+    const offers = Array.isArray(client.offers) ? client.offers : [];
+    const lastOffer = offers[0];
+    const card = document.createElement("article");
+    card.className = `client-card${client.id === selectedClientId ? " selected" : ""}`;
+    card.innerHTML = `
+      <header>
+        <h3>${escapeHtml(client.clientName)}</h3>
+        <span class="badge">${escapeHtml(client.status)}</span>
+      </header>
+      <div class="card-meta">
+        <span>Telefon: <strong>${escapeHtml(client.phone || "-")}</strong></span>
+        <span>Zonă: <strong>${escapeHtml(client.addressOrArea || "-")}</strong></span>
+        <span>Data măsurătorii: <strong>${escapeHtml(formatDate(client.measurementDate))}</strong></span>
+        <span>Oferte salvate: <strong>${offers.length}</strong></span>
+        <span>Ultima ofertă: <strong>${lastOffer ? ron(lastOffer.recommendedCustomerPrice) : "-"}</strong></span>
+      </div>
+      <div class="card-buttons">
+        <button class="small-btn green" type="button" data-action="select" data-client-id="${client.id}">Editează client</button>
+      </div>
+    `;
+    clientEls.clientList.append(card);
+  });
+}
+
+function renderOffers() {
+  const client = selectedClient();
+  clientEls.offerList.innerHTML = "";
+  if (!client) {
+    clientEls.offerList.innerHTML = '<p class="empty-state">Selectează un client pentru ofertele salvate.</p>';
+    return;
+  }
+
+  const offers = Array.isArray(client.offers) ? client.offers : [];
+  if (!offers.length) {
+    clientEls.offerList.innerHTML = '<p class="empty-state">Clientul nu are oferte salvate.</p>';
+    return;
+  }
+
+  offers.forEach((offer) => {
+    const card = document.createElement("article");
+    card.className = "offer-card";
+    card.innerHTML = `
+      <header>
+        <h3>${formatDate(offer.dateCreated)}</h3>
+        <span class="badge">${escapeHtml(offer.status || client.status)}</span>
+      </header>
+      <div class="card-meta">
+        <span>Total ofertă: <strong>${ron(offer.recommendedCustomerPrice)}</strong></span>
+        <span>Număr plase: <strong>${offer.nets.length}</strong></span>
+        <span class="internal-only">Cost materiale: <strong>${ron(offer.materialCost)}</strong></span>
+        <span class="internal-only">Profit: <strong>${ron(offer.estimatedProfit)} (${offer.profitMargin.toFixed(1)}%)</strong></span>
+      </div>
+      <div class="card-buttons">
+        <button class="small-btn green" type="button" data-action="copy-client-offer" data-offer-id="${offer.id}">Copiază ofertă client</button>
+        <button class="small-btn internal-only" type="button" data-action="copy-internal-offer" data-offer-id="${offer.id}">Copiază calcul intern</button>
+        <button class="small-btn danger" type="button" data-action="delete-offer" data-offer-id="${offer.id}">Șterge ofertă</button>
+      </div>
+    `;
+    clientEls.offerList.append(card);
+  });
+}
+
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function buildClientOfferText(result) {
+  const lines = [
+    "Oferta plase țânțari - Nicu",
+    "",
+    `Număr plase: ${result.nets.length}`,
+    `Preț recomandat client: ${ron(result.recommendedOffer)}`,
+    `Timp estimat execuție: ${hoursText(result.laborMinutes)}`,
+    "",
+    "Dimensiuni:"
+  ];
+
+  result.nets.forEach((net, index) => {
+    lines.push(`${index + 1}. ${net.type === "door" ? "Ușă balcon" : "Geam"} - ${cm(net.width)} x ${cm(net.height)}, traversă: ${net.crossbar ? "Da" : "Nu"}, închidere: ${net.closing === "magnetic" ? "magnetică" : "clips"}`);
+  });
+
+  lines.push("", "Oferta include materiale, execuție și montaj.");
+  return lines.join("\n");
+}
+
+function buildInternalOfferText(result) {
+  const cutSummary = result.cutDetails.map((detail) => (
+    `Plasa ${detail.index}: final ${cm(detail.finalWidth)} x ${cm(detail.finalHeight)}; debitare 2 x ${cm(detail.horizontalCut)} orizontal, 2 x ${cm(detail.verticalCut)} vertical${detail.hasCrossbar ? `, 1 x ${cm(detail.crossbarCut)} traversă` : ""}`
+  ));
+  return [
+    "Calculator Plase Țânțari - Nicu",
+    "",
+    `Număr plase: ${result.nets.length}`,
+    ...cutSummary,
+    "",
+    `Cost materiale: ${ron(result.materialCost)}`,
+    `Oferta minimă: ${ron(result.minOffer)}`,
+    `Oferta recomandată client: ${ron(result.recommendedOffer)}`,
+    `Oferta premium: ${ron(result.premiumOffer)}`,
+    `Profit estimat: ${ron(result.profit)} (${result.margin.toFixed(1)}%)`,
+    `Timp execuție: ${hoursText(result.laborMinutes)}`,
+    `Profit / ora: ${ron(result.profitPerHour)}`,
+    `Deșeu profile: ${cm(result.profilePlan.waste)}`,
+    `Deșeu plasă: ${result.meshPlan.wastePercent.toFixed(1)}%`,
+    "",
+    "Oferta include materiale, execuție și montaj."
+  ].join("\n");
+}
+
+function buildClientOfferTextFromSaved(client, offer) {
+  const lines = [
+    `Ofertă pentru ${client.clientName}`,
+    "",
+    `Telefon: ${client.phone || "-"}`,
+    `Adresă / zonă: ${client.addressOrArea || "-"}`,
+    `Data ofertei: ${formatDate(offer.dateCreated)}`,
+    `Preț recomandat client: ${ron(offer.recommendedCustomerPrice)}`,
+    `Timp estimat execuție: ${hoursText(offer.executionTimeMinutes)}`,
+    "",
+    "Dimensiuni:"
+  ];
+  offer.nets.forEach((net, index) => {
+    lines.push(`${index + 1}. ${net.type} - ${cm(net.finalWidth)} x ${cm(net.finalHeight)}, traversă: ${net.crossbar ? "Da" : "Nu"}, închidere: ${net.closingType}`);
+  });
+  lines.push("", "Oferta include materiale, execuție și montaj.");
+  return lines.join("\n");
+}
+
+function buildInternalOfferTextFromSaved(client, offer) {
+  const cutLines = offer.cutList.nets.map((item) => {
+    const crossbar = item.crossbarCut ? `, 1 x ${cm(item.crossbarCut)} traversă` : "";
+    return `Plasa ${item.netNumber}: ${item.type}, final ${cm(item.finalWidth)} x ${cm(item.finalHeight)}, debitare 2 x ${cm(item.horizontalCuts[0])} orizontal, 2 x ${cm(item.verticalCuts[0])} vertical${crossbar}`;
+  });
+  return [
+    `Calcul intern - ${client.clientName}`,
+    "",
+    `Data ofertei: ${formatDate(offer.dateCreated)}`,
+    `Cost materiale: ${ron(offer.materialCost)}`,
+    `Oferta minimă: ${ron(offer.minimumOffer)}`,
+    `Oferta recomandată: ${ron(offer.recommendedCustomerPrice)}`,
+    `Oferta premium: ${ron(offer.premiumOffer)}`,
+    `Profit estimat: ${ron(offer.estimatedProfit)} (${offer.profitMargin.toFixed(1)}%)`,
+    `Timp execuție: ${hoursText(offer.executionTimeMinutes)}`,
+    `Profit / ora: ${ron(offer.profitPerHour)}`,
+    "",
+    "Debitare:",
+    ...cutLines,
+    "",
+    `Deșeu profile: ${cm(offer.wasteValues.profileWasteCm)}`,
+    `Deșeu plasă: ${offer.wasteValues.meshWastePercent}%`
+  ].join("\n");
+}
+
+function findOffer(offerId) {
+  const client = selectedClient();
+  if (!client) return null;
+  const offer = (client.offers || []).find((item) => item.id === offerId);
+  return offer ? { client, offer } : null;
+}
+
+function copySavedOffer(offerId, internal) {
+  const found = findOffer(offerId);
+  if (!found) return;
+  if (internal && !internalMode) {
+    setFeedback("Activează Mod intern cu PIN pentru calculul intern.");
+    return;
+  }
+  const text = internal
+    ? buildInternalOfferTextFromSaved(found.client, found.offer)
+    : buildClientOfferTextFromSaved(found.client, found.offer);
+  navigator.clipboard.writeText(text).then(() => {
+    setFeedback(internal ? "Calcul intern copiat." : "Oferta client copiată.");
+  }).catch(() => {
+    setFeedback("Nu s-a putut copia automat.");
+  });
+}
+
+function deleteOffer(offerId) {
+  const client = selectedClient();
+  if (!client) return;
+  if (!window.confirm("Ștergi oferta selectată?")) return;
+  client.offers = (client.offers || []).filter((offer) => offer.id !== offerId);
+  client.updatedAt = new Date().toISOString();
+  saveClients();
+  renderClients();
+  renderOffers();
+  setFeedback("Oferta a fost ștearsă.");
+}
+
+function exportData() {
+  const data = JSON.stringify({ exportedAt: new Date().toISOString(), clients }, null, 2);
+  const blob = new Blob([data], { type: "application/json" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `clienti-oferte-plase-nicu-${new Date().toISOString().slice(0, 10)}.json`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+  setFeedback("Export JSON pregătit.");
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const parsed = JSON.parse(reader.result);
+      if (!Array.isArray(parsed.clients)) throw new Error("missing clients");
+      clients = parsed.clients;
+      selectedClientId = clients[0]?.id || null;
+      fillClientForm(selectedClient());
+      saveClients();
+      renderClients();
+      renderOffers();
+      setFeedback("Date importate cu succes.");
+    } catch (error) {
+      setFeedback("Fișier JSON invalid.");
+    }
+  };
+  reader.readAsText(file);
+}
+
+function initCrm() {
+  loadClients();
+  els.wasteList?.closest(".result-block")?.classList.add("internal-only");
+  applyInternalMode(false);
+  renderClients();
+  renderOffers();
+
+  internalModeBtn?.addEventListener("click", requestInternalMode);
+  clientEls.newClientBtn?.addEventListener("click", newClient);
+  clientEls.saveClientBtn?.addEventListener("click", saveClient);
+  clientEls.deleteClientBtn?.addEventListener("click", deleteClient);
+  clientEls.saveOfferToClientBtn?.addEventListener("click", saveOfferToClient);
+  clientEls.exportDataBtn?.addEventListener("click", exportData);
+  clientEls.importDataBtn?.addEventListener("click", () => clientEls.importFileInput.click());
+  clientEls.importFileInput?.addEventListener("change", (event) => {
+    const file = event.target.files[0];
+    if (file) importData(file);
+    event.target.value = "";
+  });
+  clientEls.clientSearch?.addEventListener("input", renderClients);
+  clientEls.statusFilter?.addEventListener("change", renderClients);
+  clientEls.clientList?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    if (button.dataset.action === "select") selectClient(button.dataset.clientId);
+  });
+  clientEls.offerList?.addEventListener("click", (event) => {
+    const button = event.target.closest("button[data-action]");
+    if (!button) return;
+    if (button.dataset.action === "copy-client-offer") copySavedOffer(button.dataset.offerId, false);
+    if (button.dataset.action === "copy-internal-offer") copySavedOffer(button.dataset.offerId, true);
+    if (button.dataset.action === "delete-offer") deleteOffer(button.dataset.offerId);
+  });
+}
+
 function resetApp() {
   form.innerHTML = "";
   addNet({ type: "window", width: 100, height: 120, quantity: 1, crossbar: false, closing: "clips" });
@@ -500,4 +1047,5 @@ calculateBtn.addEventListener("click", calculate);
 resetBtn.addEventListener("click", resetApp);
 copyBtn.addEventListener("click", copyOffer);
 
+initCrm();
 resetApp();

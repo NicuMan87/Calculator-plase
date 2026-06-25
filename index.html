@@ -17,6 +17,7 @@
         <span></span>
         Instant
       </div>
+      <button class="secondary internal-toggle" id="internalModeBtn" type="button">Mod intern</button>
     </header>
 
     <section class="summary-grid" aria-label="Rezumat oferta">
@@ -26,11 +27,13 @@
       </article>
       <article class="metric-card">
         <span>Cost materiale</span>
-        <strong id="materialCost">0 RON</strong>
+        <strong id="materialCost" class="internal-only">0 RON</strong>
+        <em class="locked-value">Protejat</em>
       </article>
       <article class="metric-card">
         <span>Profit estimat</span>
-        <strong id="estimatedProfit">0 RON</strong>
+        <strong id="estimatedProfit" class="internal-only">0 RON</strong>
+        <em class="locked-value">Protejat</em>
       </article>
       <article class="metric-card">
         <span>Timp execuție</span>
@@ -66,22 +69,22 @@
           </div>
         </div>
 
-        <div class="result-block">
+        <div class="result-block internal-only">
           <h3>Profile</h3>
           <div id="profileList" class="line-list"></div>
         </div>
 
-        <div class="result-block">
+        <div class="result-block internal-only">
           <h3>Debitare profile</h3>
           <div id="cutsList" class="cuts-list"></div>
         </div>
 
-        <div class="result-block">
+        <div class="result-block internal-only">
           <h3>Plasă, cheder și accesorii</h3>
           <div id="materialsList" class="line-list"></div>
         </div>
 
-        <div class="result-block">
+        <div class="result-block internal-only">
           <h3>Prețuri ofertă</h3>
           <div id="pricingList" class="line-list"></div>
         </div>
@@ -92,6 +95,95 @@
         </div>
       </section>
     </div>
+    <section class="panel crm-panel" aria-label="Clienți și lucrări">
+      <div class="panel-heading">
+        <div>
+          <p class="eyebrow">CRM local</p>
+          <h2>Clienți / Lucrări</h2>
+        </div>
+        <div class="status-pill selected-client-pill" id="selectedClientLabel">Niciun client selectat</div>
+      </div>
+
+      <div class="crm-layout">
+        <section class="crm-column">
+          <div class="crm-toolbar">
+            <button class="primary" id="newClientBtn" type="button">Adaugă client</button>
+            <button class="secondary" id="saveClientBtn" type="button">Salvează client</button>
+            <button class="ghost" id="deleteClientBtn" type="button">Șterge client</button>
+          </div>
+
+          <form class="client-form" id="clientForm">
+            <label>
+              <span>Nume client</span>
+              <input id="clientName" type="text" autocomplete="name">
+            </label>
+            <label>
+              <span>Telefon</span>
+              <input id="clientPhone" type="tel" autocomplete="tel">
+            </label>
+            <label>
+              <span>Adresă / zonă</span>
+              <input id="clientArea" type="text">
+            </label>
+            <label>
+              <span>Data măsurătorii</span>
+              <input id="measurementDate" type="date">
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="clientStatus">
+                <option>De măsurat</option>
+                <option>Ofertat</option>
+                <option>Acceptat</option>
+                <option>Programat</option>
+                <option>Finalizat</option>
+                <option>Pierdut</option>
+              </select>
+            </label>
+            <label class="wide-field">
+              <span>Notițe</span>
+              <textarea id="clientNotes" rows="4"></textarea>
+            </label>
+          </form>
+
+          <div class="actions crm-actions">
+            <button class="primary" id="saveOfferToClientBtn" type="button">Salvează oferta la client</button>
+            <button class="secondary" id="exportDataBtn" type="button">Exportă date JSON</button>
+            <button class="ghost" id="importDataBtn" type="button">Importă date JSON</button>
+            <input id="importFileInput" type="file" accept="application/json,.json" hidden>
+          </div>
+          <p class="copy-feedback" id="crmFeedback" aria-live="polite"></p>
+        </section>
+
+        <section class="crm-column">
+          <div class="filter-grid">
+            <label>
+              <span>Caută client sau telefon</span>
+              <input id="clientSearch" type="search" placeholder="Nume sau telefon">
+            </label>
+            <label>
+              <span>Filtru status</span>
+              <select id="statusFilter">
+                <option value="all">Toate</option>
+                <option>De măsurat</option>
+                <option>Ofertat</option>
+                <option>Acceptat</option>
+                <option>Programat</option>
+                <option>Finalizat</option>
+                <option>Pierdut</option>
+              </select>
+            </label>
+          </div>
+
+          <div id="clientList" class="client-list"></div>
+
+          <div class="result-block offers-block">
+            <h3>Oferte salvate</h3>
+            <div id="offerList" class="offer-list"></div>
+          </div>
+        </section>
+      </div>
+    </section>
   </main>
 
   <template id="netTemplate">

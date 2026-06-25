@@ -205,7 +205,8 @@ label span {
 }
 
 input,
-select {
+select,
+textarea {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--line);
@@ -217,9 +218,15 @@ select {
 }
 
 input:focus,
-select:focus {
+select:focus,
+textarea:focus {
   border-color: var(--green);
   box-shadow: 0 0 0 3px rgba(66, 217, 130, 0.12);
+}
+
+textarea {
+  resize: vertical;
+  line-height: 1.45;
 }
 
 .toggle-row {
@@ -344,6 +351,159 @@ select:focus {
   padding: 10px 0;
 }
 
+.internal-toggle {
+  white-space: nowrap;
+  min-height: 40px;
+  padding: 0 12px;
+}
+
+body:not(.internal-mode) .internal-only {
+  display: none !important;
+}
+
+body:not(.internal-mode) .result-block:has(#wasteList) {
+  display: none !important;
+}
+
+.locked-value {
+  display: none;
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 700;
+}
+
+body:not(.internal-mode) .locked-value {
+  display: block;
+}
+
+.crm-panel {
+  margin-top: 14px;
+}
+
+.crm-layout {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.crm-column {
+  min-width: 0;
+}
+
+.crm-toolbar,
+.filter-grid,
+.client-form {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.client-form {
+  margin-top: 14px;
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.selected-client-pill {
+  max-width: 100%;
+  white-space: normal;
+}
+
+.client-list,
+.offer-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.client-card,
+.offer-card {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-soft);
+  padding: 12px;
+}
+
+.client-card.selected {
+  border-color: rgba(66, 217, 130, 0.7);
+  box-shadow: 0 0 0 3px rgba(66, 217, 130, 0.12);
+}
+
+.client-card header,
+.offer-card header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.client-card h3,
+.offer-card h3 {
+  overflow-wrap: anywhere;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  padding: 4px 9px;
+  background: rgba(66, 217, 130, 0.13);
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.card-meta {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.card-meta strong {
+  color: var(--text);
+}
+
+.card-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.small-btn {
+  min-height: 38px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: #0f1513;
+  color: var(--text);
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.small-btn.green {
+  color: var(--green);
+  border-color: rgba(66, 217, 130, 0.45);
+  background: rgba(66, 217, 130, 0.1);
+}
+
+.small-btn.danger {
+  color: #ffd1d1;
+  border-color: rgba(255, 107, 107, 0.45);
+  background: rgba(255, 107, 107, 0.08);
+}
+
+.offers-block {
+  margin-top: 14px;
+}
+
 @media (min-width: 620px) {
   .app-shell {
     padding: 28px 22px 44px;
@@ -361,6 +521,19 @@ select:focus {
   .actions {
     grid-template-columns: 1fr 1fr 1fr;
   }
+
+  .crm-toolbar,
+  .filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .client-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .card-buttons {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @media (min-width: 980px) {
@@ -372,5 +545,10 @@ select:focus {
   .output-panel {
     position: sticky;
     top: 18px;
+  }
+
+  .crm-layout {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    align-items: start;
   }
 }
